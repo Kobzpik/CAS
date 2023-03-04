@@ -6,6 +6,8 @@ Central authentication server is particular type of server that a user to allow 
 Among the various options we can choose OpenLDAP as a best solution to develop a central authentication server on Redhat.
 We Need to configure two servers as server machines and client machines to develop a central authentication server(CAS).
 
+![image](https://github.com/Kobzpik/CAS/blob/main/image.jpg)
+
 OS – RHEL 8.6                                                                 
 Hostname – localhost
 IP address – 192.168.56.102  
