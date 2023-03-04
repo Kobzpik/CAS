@@ -98,3 +98,13 @@ we need to change ownership and permission of the certificate file for increase 
 netstat -lt | grep ldap
 ```
 Check the service using netstat to ensure services are properly running
+
+ 8. Setup root password
+ ```
+Slappasswd
+```
+$ New password:
+$ Re-enter new password:
+$ {SSHA}xxxxxxxxxxxxxxxxxxxxxx
+
+Here too you need to copy and save password key on the notepad for admin user configuration.
