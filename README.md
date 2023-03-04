@@ -2,6 +2,8 @@
 ## What is the central authentication server
 Central authentication server is particular type of server that a user to allow access to multiple servers using the same authentication service. This server very helpful to manage multiple servers.
 
+## Develop the central authentication server
+Among the various options we can choose OpenLDAP as a best solution to develop a central authentication server on Redhat.
 We Need to configure two servers as server machines and client machines to develop a central authentication server(CAS).
 
 OS – RHEL 8.6                                                                 
@@ -57,3 +59,40 @@ In addition, centos 8 and Rocky Linux can be used as OS to develop central authe
   dnf install wget vim cyrus-sasl-devel libtool-ltdl-devel openssl-devel libdb-devel make libtool autoconf tar gcc perl perl-devel –y
 ```
  
+ 3. Install the Symas OpenLDAP Package
+ ```
+  wget -q https://repo.symas.com/configs/SOFL/rhel8/sofl.repo -O /etc/yum.repos.d/sofl.repo
+```
+```
+ yum install symas-openldap-clients symas-openldap-servers –y
+```
+ 4. Restart the slapd service
+ ```
+systemctl start slapd
+```
+```
+systemctl enable slapd
+```
+ 5.  New certificate needs to generated to valid for 365 days
+```
+openssl req -new -x509 -nodes -out /etc/openldap/certs/cert.pem -keyout /etc/openldap/certs/priv.pem -days 365
+```
+We need a properly formatted certificate to communicate as LDAPS. This certificate lets a OpenLDAP service listen for and automatically accept SSL connections. The server certificate is used for authenticating the OpenLDAP server to the client during the LDAPS setup and for enabling the SSL communication tunnel between the client and the server.
+ 
+ 6. Change the ownership and permission of certificate
+```
+cd /etc/openldap/certs
+```
+```
+chown ldap:ldap *
+```
+```
+chmod 600 priv.pem
+```
+we need to change ownership and permission of the certificate file for increase certificate file confidentiality.
+
+ 7. So Check the service if it’s running.
+```
+netstat -lt | grep ldap
+```
+Check the service using netstat to ensure services are properly running
