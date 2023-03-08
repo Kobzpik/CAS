@@ -24,7 +24,7 @@ In addition, centos 8 and Rocky Linux can be used as OS to develop central authe
 * Local yum repository should be configured on both machine.
  
  ## Server machine configuration
- 1. adding the firewall limitation with the Port 389 for the non-secure association and Port 636 unique to the secure port connection to allow remote clients to query openldap server.
+ **1. adding the firewall limitation with the Port 389 for the non-secure association and Port 636 unique to the secure port connection to allow remote clients to query openldap server.**
  
 ```
   firewall-cmd --permanent --add-port=389/TCP
@@ -37,7 +37,7 @@ In addition, centos 8 and Rocky Linux can be used as OS to develop central authe
 ```
  
 
- 2. install required dependencies and build tools
+ **2. install required dependencies and build tools**
  We need to install some packages. For that we need to check whether this package is available in our machine or not.
  
  ```
@@ -61,27 +61,27 @@ In addition, centos 8 and Rocky Linux can be used as OS to develop central authe
   dnf install wget vim cyrus-sasl-devel libtool-ltdl-devel openssl-devel libdb-devel make libtool autoconf tar gcc perl perl-devel –y
 ```
  
- 3. Install the Symas OpenLDAP Package
+ **3. Install the Symas OpenLDAP Package**
  ```
   wget -q https://repo.symas.com/configs/SOFL/rhel8/sofl.repo -O /etc/yum.repos.d/sofl.repo
 ```
 ```
  yum install symas-openldap-clients symas-openldap-servers –y
 ```
- 4. Restart the slapd service
+ **4. Restart the slapd service**
  ```
 systemctl start slapd
 ```
 ```
 systemctl enable slapd
 ```
- 5.  New certificate needs to generated to valid for 365 days
+ **5.  New certificate needs to generated to valid for 365 days**
 ```
 openssl req -new -x509 -nodes -out /etc/openldap/certs/cert.pem -keyout /etc/openldap/certs/priv.pem -days 365
 ```
 We need a properly formatted certificate to communicate as LDAPS. This certificate lets a OpenLDAP service listen for and automatically accept SSL connections. The server certificate is used for authenticating the OpenLDAP server to the client during the LDAPS setup and for enabling the SSL communication tunnel between the client and the server.
  
- 6. Change the ownership and permission of certificate
+ **6. Change the ownership and permission of certificate**
 ```
 cd /etc/openldap/certs
 ```
@@ -93,18 +93,59 @@ chmod 600 priv.pem
 ```
 we need to change ownership and permission of the certificate file for increase certificate file confidentiality.
 
- 7. So Check the service if it’s running.
+ **7. So Check the service if it’s running.**
 ```
 netstat -lt | grep ldap
 ```
 Check the service using netstat to ensure services are properly running
 
- 8. Setup root password
+ **8. Setup root password**
  ```
 Slappasswd
+```
 ```
 $ New password:
 $ Re-enter new password:
 $ {SSHA}xxxxxxxxxxxxxxxxxxxxxx
+```
 
 Here too you need to copy and save password key on the notepad for admin user configuration.
+ 
+ **9. Replace olcSuffix and olcRootDN attribute**
+ 
+ To complete this task we need a reference file for that we have to create .ldif file. For that let's create config,ldif file.
+
+ $ vi config.ldif
+```
+dn: olcDatabase={2}mdb,cn=config 
+changetype: modify 
+replace: olcSuffix 
+olcSuffix: dc=ldapmaster,dc=kobzserver,dc=com
+
+dn: olcDatabase={2}mdb,cn=config 
+changetype: modify 
+replace: olcRootDN olcRootDN: cn=admin,dc=ldapmaster,dc=kobzserver,dc=com
+```
+Then run the following command
+```
+ldapmodify -Y EXTERNAL -H ldapi:/// -f config.ldif
+```
+The first line identifies the main entry in the LDAP that we are going to change. Just a moment ago, we saw the parameter olcSuffix inside the /etc/openldap/slapd.d/cn=config/olcDatabase={2}mdb.ldif file. In this file, the dn (distinguished name) attribute is dn: olcDatabase={2}mdb, and as the file is inside the config folder, the full dn attribute isdn: olcDatabase={2}mdb,cn=config.
+Also Usually olcSuffix is choosen to reflect the domain name of the slapd running host. For example, if the server runs on a host thats domain name is ldapmaster.kobzserver.com, the olcSuffix attribute is set to dc=ldapmaster,dc= kobzserver,dc=com
+To change the suffix of your database, you first have to modify the olcSuffix and olcRootDN attributes to match your domain name.
+
+ **10.Add olcRootPW attribute**
+ 
+ $vi config1.ldif
+ 
+ ```
+ dn: olcDatabase={2}mdb,cn=config 
+ changeType: modify 
+ add: olcRootPW 
+ olcRootPW: {SSHA}K93VG/aHvWNSYAuBS7G+mj54nxlJfMj8
+ ```
+ ```
+ ldapmodify -Y EXTERNAL -H ldapi:/// -f config1.ldif
+ ```
+ 
+ 
