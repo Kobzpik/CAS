@@ -147,5 +147,177 @@ To change the suffix of your database, you first have to modify the olcSuffix an
  ```
  ldapmodify -Y EXTERNAL -H ldapi:/// -f config1.ldif
  ```
+ **11.We also have to allow access to the LDAP database to the admin user**
+
+ $ vi config2.ldif
+  ```
+ dn: olcDatabase={1}monitor,cn=config
+ changetype: modify 
+ replace: olcAccess 
+ olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external, cn=auth" read by dn.base="cn=admin,dc=ldapmaster,dc=kobzserver,dc=com" read by * none
+ ```
+ ```
+ ldapmodify -Y EXTERNAL -H ldapi:/// -f config2.ldif
+ ```
+ We also have to allow access to the LDAP database to the admin user we just specified before (cn=admin,dc=ldapmaster,dc=kobzserver,dc=com).
+
+ **12.Adding domain details**
+
+ $ vi root.ldif
+ ```
+ dn: dc=ldapmaster,dc=kobzserver,dc=com 
+ objectClass: dcObject 
+ objectClass: organization 
+ dc: ldapmaster 
+ o: lapmaster
+ ```
+ ```
+ ldapadd -f root.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+ ```
+ Note - You should replace your password instead [pwd…]
+
+ In this, we have to manually create an entry for dc=ldapmaster,dc=kobzserver,dc=com in our LDAP server. We specify a series of attributes, such as distinguished name (dn), domain component (dc), and organization (o).
+
+  **13.We can check whether the entry was created successfully by using the ldapsearch command.**
+  ```
+  ldapsearch -x -b dc=ldapmaster,dc=kobzserver,dc=com
+  ```
+  **14.Adding an Organizational Unit.**
+
+  $ vi unit.ldif
+
+  ```
+  dn: ou=users,dc=ldapmaster,dc=kobzserver,dc=com 
+  objectClass: organizationalUnit 
+  ou: users
+  ```
+  ```
+  ldapadd -f unit.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+  ```
+  Note - You should replace your password instead [pwd…]
+
+  we have to an organizational unit (OU) called users in which to store all LDAP users.
+
+  **15.For adding users into server we need to install cosine , inetorgperson and nis core schemes.**
+  ```
+  ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/cosine.ldif 
+  ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/inetorgperson.ldif 
+  ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/nis.ldif
+  ```
+  then add the user
+
+  $ vi user.ldif
+  ```
+  dn: uid=prabath,ou=users,dc=ldapmaster,dc=kobzserver,dc=com 
+  objectClass: top 
+  objectClass: account 
+  objectClass: posixAccount 
+  objectClass: shadowAccount 
+  cn: prabath #Enter user name here
+  uid: prabath #Enter user id here
+  uidNumber: 1009 #Enter user id number here
+  gidNumber: 1009 #Enter user group id number here
+  homeDirectory: /home/prabath 
+  loginShell: /bin/bash 
+  gecos: prabath
+  userPassword: 34195033 # Enter user password here
+  shadowLastChange: 12 
+  shadowMax: 12 
+  shadowWarning: 2 
+  ```
+  ```
+  ldapadd -f user1.ldif -x -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+  ```
+  Note - You should replace your instead [pwd…]
+
+  In here we specify a series of attributes, such as cn (common name).
+
+ **16.Adding group**
  
+ $ vi group.ldif
+ ```
+ dn: cn=manager,ou=users,dc=ldapmaster,dc=kobzserver,dc=com 
+ cn: manager 
+ objectClass: groupOfNames 
+ member: cn=manager,ou=users,dc=ldapmaster,dc=kobzserver,dc=com
+ ```
+ ```
+ ldapadd -f group.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+ ```
+ **17.Adding password policy**
+ 
+ * Install ppolocy module
+ * Create password policy OU container
+ $ vi pwpolicy-ou.ldif
+ 
+ ```
+ dn: ou=pwpolicy,dc=ldapmaster,dc=kobzserver,dc=com 
+ objectClass: organizationalUnit 
+ objectClass: top 
+ ou: pwpolicy
+ ```
+ ```
+ ldapadd -f pwpolicy-ou.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+ ```
+ * Create OpenLDAP Password Policy Overlay DN
+ 
+ $ vi pwpolicyoverlay.ldif
+ ```
+ dn: olcOverlay=ppolicy,olcDatabase={2}mdb,cn=config 
+ objectClass: olcOverlayConfig 
+ objectClass: olcPPolicyConfig
+ olcOverlay: ppolicy 
+ olcPPolicyDefault: cn=default,ou=pwpolicy,dc=ldapmaster,dc=kobzserver,dc=com 
+ olcPPolicyHashCleartext: TRUE
+ ```
+ ```
+ ldapadd -f pwpolicyoverlay.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+ ```
+ * Create the password policy
+ 
+ $ vi passwordpolicy.ldif
+ 
+ ```
+ dn: cn=default,ou=pwpolicy,dc=ldapmaster,dc=kobzserver,dc=com 
+ objectClass: person 
+ objectClass: pwdPolicyChecker 
+ objectClass: pwdPolicy 
+ cn: pwpolicy 
+ sn: pwpolicy 
+ pwdAttribute: userPassword 
+ pwdMinAge: 1 
+ pwdMaxAge: 2 
+ pwdMinLength: 8 
+ pwdExpireWarning: 1
+ pwdGraceAuthNLimit: 5
+ pwdLockoutDuration: 0
+ pwdMaxFailure: 3
+ pwdFailureCountInterval: 0
+ pwdReset: TRUE
+ pwdMustChange: TRUE
+ pwdSafeModify: FALSE
+ pwdAllowUserChange: FALSE
+ dn: cn=default,ou=pwpolicy,dc=ldapmaster,dc=kobzserver,dc=com 
+ objectClass: person 
+ objectClass: pwdPolicyChecker
+ objectClass: pwdPolicy 
+ cn: pwpolicy 
+ sn: pwpolicy 
+ pwdAttribute: userPassword 
+ pwdMinAge: 1 
+ pwdMaxAge: 2 
+ pwdMinLength: 8 
+ pwdExpireWarning: 1 
+ pwdGraceAuthNLimit: 5 
+ pwdLockoutDuration: 0 
+ pwdMaxFailure: 3 
+ pwdFailureCountInterval: 0 
+ pwdReset: TRUE
+ pwdMustChange: TRUE 
+ pwdSafeModify: FALSE 
+ pwdAllowUserChange: FALSE
+ ```
+ ```
+ ldapadd -f passwordpolicy.ldif -D cn=admin,dc=ldapmaster,dc=kobzserver,dc=com -w [pwd…]
+ ```
  
